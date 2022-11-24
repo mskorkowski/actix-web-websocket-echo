@@ -14,6 +14,7 @@ use actix_web::HttpResponse;
 use actix_web_actors::ws;
 use actix_web_actors::ws::WebsocketContext;
 
+use actix_web_actors::ws::WsResponseBuilder;
 use bytes::BufMut;
 use bytes::Bytes;
 use bytes::BytesMut;
@@ -339,5 +340,10 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketActor {
 }
 
 pub async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, WebError> {
-    ws::start(WebsocketActor::default(), &req, stream)
+    WsResponseBuilder::new(
+        WebsocketActor::default(), 
+        &req, stream
+    )
+        .frame_size(16_777_216)
+        .start()
 }

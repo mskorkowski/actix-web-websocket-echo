@@ -2,6 +2,62 @@
 
 "Better" websocket echo server
 
+## Running tests
+
+### Server
+
+In the project root
+
+```sh
+cargo run
+```
+
+### Running autobahn test suite
+
+#### Docker
+
+In the project root
+
+```sh
+docker run -it --rm \
+    -v "${PWD}/config:/config" \
+    -v "${PWD}/reports:/reports" \
+    --network host \
+    --name autobahn \
+    crossbario/autobahn-testsuite \
+    wstest \
+    --spec /config/fuzzingclient.json \
+    --mode fuzzingclient
+```
+
+#### Podman
+
+```sh
+docker run -it --rm \
+    -v "${PWD}/config":/config \
+    -v "${PWD}/reports":/reports \
+    --network host \
+    --name autobahn \
+    crossbario/autobahn-testsuite \
+    wstest \
+    --spec /config/fuzzingclient-podman.json \
+    --mode fuzzingclient
+```
+
+If you run it with `selinux` enabled, then
+
+```sh
+docker run -it --rm \
+    -v "${PWD}/config":/config:z \
+    -v "${PWD}/reports":/reports:z \
+    --network host \
+    --name autobahn \
+    crossbario/autobahn-testsuite \
+    wstest \
+    --spec /config/fuzzingclient-podman.json \
+    --mode fuzzingclient
+```
+
 ## Fixes
 
 ### 5 Fragmentation
@@ -52,9 +108,13 @@
 - 7.9.8
 - 7.9.9
 
+### 9 Limits/Performance
+
+All 54 cases in this section are passing
+
 ### 10 Auto-Fragmentation
 
-- 10.1.1 
+- 10.1.1
 
 ## From non strict to strict
 
