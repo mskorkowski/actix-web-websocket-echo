@@ -52,6 +52,10 @@
 - 7.9.8
 - 7.9.9
 
+### 10 Auto-Fragmentation
+
+- 10.1.1 
+
 ## From non strict to strict
 
 - 5.15
