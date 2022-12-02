@@ -1,4 +1,5 @@
-mod endpoints;
+mod websocket;
+mod utf8;
 
 use actix::prelude::*;
 use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
@@ -13,7 +14,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .wrap(middleware::Logger::default())
-            .service(web::resource("/").route(web::get().to(endpoints::websocket::index)))
+            .service(web::resource("/").route(web::get().to(websocket::index)))
     })
     .workers(2)
     .bind(("0.0.0.0", 9001))?

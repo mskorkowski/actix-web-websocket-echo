@@ -33,7 +33,7 @@ docker run -it --rm \
 #### Podman
 
 ```sh
-docker run -it --rm \
+podman run -it --rm \
     -v "${PWD}/config":/config \
     -v "${PWD}/reports":/reports \
     --network host \
@@ -47,7 +47,7 @@ docker run -it --rm \
 If you run it with `selinux` enabled, then
 
 ```sh
-docker run -it --rm \
+podman run -it --rm \
     -v "${PWD}/config":/config:z \
     -v "${PWD}/reports":/reports:z \
     --network host \

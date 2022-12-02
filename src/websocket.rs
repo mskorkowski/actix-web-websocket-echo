@@ -1,4 +1,4 @@
-mod utf8;
+use super::utf8;
 
 use actix::Actor;
 use actix::ActorContext;
@@ -324,7 +324,6 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketActor {
                     Ok(ContinuationMessage::Unfinished) => {}
                 }
             }
-            Ok(ws::Message::Nop) => self.nop(ctx),
             Ok(ws::Message::Ping(data)) => self.ping(data, ctx),
             Ok(ws::Message::Pong(data)) => self.pong(data, ctx),
             Ok(ws::Message::Text(text)) => {
@@ -334,6 +333,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketActor {
                     self.protocol_error(ws::ProtocolError::ContinuationStarted, ctx);
                 }
             }
+            Ok(ws::Message::Nop) => self.nop(ctx),
             Err(e) => self.protocol_error(e, ctx),
         }
     }
