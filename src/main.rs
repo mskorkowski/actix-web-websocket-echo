@@ -1,9 +1,7 @@
 mod websocket;
 mod utf8;
 
-use actix::prelude::*;
-use actix_web::{middleware, web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws;
+use actix_web::{middleware, web, App, HttpServer};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
