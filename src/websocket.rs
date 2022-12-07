@@ -57,8 +57,6 @@ impl ContinuationBuffer {
     }
 
     fn append(&mut self, data: Bytes) -> Result<(), ws::ProtocolError> {
-        println!("Appending: {:#?}", data);
-
         match self {
             Self::Binary(buffer) => {
                 buffer.push(data);
@@ -79,29 +77,24 @@ impl ContinuationBuffer {
                     None => data,
                 };
 
-                println!("Entry data: {:#?}", data);
                 let ValidUtf8 {
                     valid,
                     overflow: message_overflow,
                 } = validate_utf8_bytes(data)?;
 
-                let r = ByteString::try_from(valid.clone()).map_err(|e| {
-                    println!("Should be a hit");
-
+                ByteString::try_from(valid.clone()).map_err(|e| {
                     ProtocolError::Io(std::io::Error::new(
                         std::io::ErrorKind::Other,
                         format!("{}", e),
                     ))
                 })?;
 
-                println!("Received: {:#?}", r);
-
                 buffer.push(valid);
 
                 if let Some(message_overflow) = message_overflow {
                     _ = overflow.insert(message_overflow);
                 }
-                
+
                 Ok(())
             }
             Self::Empty => Err(ws::ProtocolError::ContinuationNotStarted),
@@ -124,7 +117,6 @@ impl WebsocketActor {
         &mut self,
         item: Item,
     ) -> Result<ContinuationMessage, ws::ProtocolError> {
-        println!("Received Continuation: {:#?}", item);
         match item {
             Item::FirstBinary(data) => {
                 if self.continuation_buffer.is_empty() {
@@ -136,7 +128,6 @@ impl WebsocketActor {
             }
             Item::FirstText(data) => {
                 if self.continuation_buffer.is_empty() {
-                    println!("Entry data: {:#?}", data);
                     let ValidUtf8 { valid, overflow } = validate_utf8_bytes(data)?;
 
                     ByteString::try_from(valid.clone()).map_err(|e| {
@@ -178,7 +169,6 @@ impl WebsocketActor {
                             None => data,
                         };
 
-                        println!("Entry data: {:#?}", data);
                         let ValidUtf8 {
                             valid,
                             overflow: message_overflow,
@@ -231,12 +221,10 @@ impl WebsocketActor {
     }
 
     fn binary(&mut self, bin: Bytes, ctx: &mut <Self as Actor>::Context) {
-        println!("Received Binary: {:#?}", bin);
         ctx.binary(bin);
     }
 
     fn close(&mut self, reason: Option<CloseReason>, ctx: &mut <Self as Actor>::Context) {
-        println!("Received Close\n\treason: {:#?}", reason);
         match reason {
             Some(CloseReason {
                 code: CloseCode::Other(code),
@@ -260,28 +248,16 @@ impl WebsocketActor {
         ctx.stop();
     }
 
-    fn nop(&mut self, _ctx: &mut <Self as Actor>::Context) {
-        println!("Received Nop");
-    }
-
-    fn ping(&mut self, data: Bytes, ctx: &mut <Self as Actor>::Context) {
-        println!("Received Ping");
-        ctx.pong(data.as_ref());
-    }
-
-    fn pong(&mut self, _data: Bytes, _ctx: &mut <Self as Actor>::Context) {
-        println!("Received PONG");
-    }
-
     fn text(&mut self, text: ByteString, ctx: &mut <Self as Actor>::Context) {
-        let str = text.to_string();
-        println!("Received text: {}", str);
         ctx.text(text);
     }
 
-    fn protocol_error(&mut self, e: ProtocolError, ctx: &mut <Self as Actor>::Context) {
-        println!("Error: {:#?}", e);
+    fn protocol_error(&mut self, ctx: &mut <Self as Actor>::Context) {
         ctx.stop();
+    }
+
+    fn ping(&mut self, data: Bytes, ctx: &mut <Self as Actor>::Context) {
+        ctx.pong(data.as_ref());
     }
 }
 
@@ -304,7 +280,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketActor {
                 if self.continuation_buffer.is_empty() {
                     self.binary(bin, ctx)
                 } else {
-                    self.protocol_error(ws::ProtocolError::ContinuationStarted, ctx);
+                    self.protocol_error(ctx);
                 }
             }
             Ok(ws::Message::Close(reason)) => self.close(reason, ctx),
@@ -312,23 +288,24 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebsocketActor {
                 let result = self.continuation_handler(item);
 
                 match result {
-                    Err(e) => self.protocol_error(e, ctx),
+                    Err(_) => self.protocol_error(ctx),
                     Ok(ContinuationMessage::Binary(bin)) => self.binary(bin, ctx),
                     Ok(ContinuationMessage::Text(text)) => self.text(text, ctx),
                     Ok(ContinuationMessage::Unfinished) => {}
                 }
             }
-            Ok(ws::Message::Ping(data)) => self.ping(data, ctx),
-            Ok(ws::Message::Pong(data)) => self.pong(data, ctx),
             Ok(ws::Message::Text(text)) => {
                 if self.continuation_buffer.is_empty() {
                     self.text(text, ctx);
                 } else {
-                    self.protocol_error(ws::ProtocolError::ContinuationStarted, ctx);
+                    self.protocol_error(ctx);
                 }
             }
-            Ok(ws::Message::Nop) => self.nop(ctx),
-            Err(e) => self.protocol_error(e, ctx),
+            Ok(ws::Message::Ping(data)) =>{
+                self.ping(data, ctx)
+            }
+            Ok(_) => (),
+            Err(_) => self.protocol_error(ctx),
         }
     }
 }
@@ -338,6 +315,7 @@ pub async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpRespons
         WebsocketActor::default(), 
         &req, stream
     )
+    // allow 16MB of data to be sent in single message (biggest frame in autobahn test)
         .frame_size(16_777_216)
         .start()
 }
