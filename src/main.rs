@@ -15,7 +15,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/").route(web::get().to(websocket::index)))
     })
     .workers(2)
-    .bind(("0.0.0.0", 9001))?
+    .bind(("0.0.0.0", 9010))?
     .run()
     .await
 }
